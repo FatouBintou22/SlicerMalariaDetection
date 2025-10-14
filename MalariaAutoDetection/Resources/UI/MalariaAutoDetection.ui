@@ -29,7 +29,7 @@
    <item>
     <widget class="ctkCollapsibleButton" name="inputsCollapsibleButton">
      <property name="text">
-      <string>📥 Inputs</string>
+      <string>📥 Entrées</string>
      </property>
      <property name="collapsed">
       <bool>false</bool>
@@ -38,14 +38,14 @@
       <item row="0" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>Microscopy image:</string>
+         <string>Image de microscopie:</string>
         </property>
        </widget>
       </item>
       <item row="1" column="0">
        <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>Detection model:</string>
+         <string>Modèle de détection:</string>
         </property>
        </widget>
       </item>
@@ -83,7 +83,7 @@
          }</string>
         </property>
         <property name="text">
-         <string>▶ Start analysis</string>
+         <string>▶ Commencer l'analyse</string>
         </property>
        </widget>
       </item>
@@ -117,7 +117,7 @@
    <item>
     <widget class="ctkCollapsibleButton" name="outputsCollapsibleButton">
      <property name="text">
-      <string>📊 Outputs</string>
+      <string>📊 Résultats</string>
      </property>
      <property name="collapsed">
       <bool>false</bool>
@@ -146,7 +146,7 @@
          }</string>
         </property>
         <property name="title">
-         <string>Detections</string>
+         <string>Détections</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_analytics">
          <property name="spacing">
@@ -216,7 +216,7 @@
               }</string>
              </property>
              <property name="text">
-              <string>⚪ Leukocytes</string>
+              <string>⚪ Leucocytes</string>
              </property>
             </widget>
            </item>
@@ -268,7 +268,7 @@
               }</string>
              </property>
              <property name="text">
-              <string>📈 Density (DP)</string>
+              <string>📈 Densité (DP)</string>
              </property>
             </widget>
            </item>
@@ -341,7 +341,7 @@
          }</string>
         </property>
         <property name="text">
-         <string>💾 Export (CSV)</string>
+         <string>💾 Exporter (CSV)</string>
         </property>
        </widget>
       </item>
@@ -351,7 +351,7 @@
    <item>
     <widget class="ctkCollapsibleButton" name="advancedCollapsibleButton">
      <property name="text">
-      <string>⚡ Advanced</string>
+      <string>⚡ Avancé</string>
      </property>
      <property name="collapsed">
       <bool>false</bool>
