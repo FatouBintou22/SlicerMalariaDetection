@@ -228,6 +228,8 @@ class MalariaAutoDetectionLogic(ScriptedLoadableModuleLogic):
     def __init__(self):
         ScriptedLoadableModuleLogic.__init__(self)
         self.lastResults = None
+        self.lastModel = None  # Cache loaded model for performance
+        self.lastModelPath = None  # Track last used model path
 
     def getParameterNode(self):
         return MalariaAutoDetectionParameterNode(super().getParameterNode())
@@ -299,12 +301,15 @@ class MalariaAutoDetectionLogic(ScriptedLoadableModuleLogic):
             raise FileNotFoundError(f"Model file not found: {modelPath}")
         
         try:
-            # Load YOLO model only once per session (performance)
-            if not hasattr(self, "_yoloModel") or self._yoloModel.model.fuse is None:
-                self._yoloModel = YOLO(modelPath)
-                logging.info(f"YOLO model loaded from: {modelPath}")
-
-            model = self._yoloModel
+            # Load model only once per session (performance)
+            if self.lastModelPath == modelPath and self.lastModel and self.lastModel.model.fuse is not None:
+                logging.info(f"Using cached YOLO model from: {self.lastModelPath}")
+                model = self.lastModel
+            else:
+                logging.info(f"Loading model from: {modelPath}")
+                model = YOLO(modelPath)
+                self.lastModel = model
+                self.lastModelPath = modelPath
 
             # Convert inputVolume (VTK) → numpy
             image_array = slicer.util.arrayFromVolume(inputVolume)
