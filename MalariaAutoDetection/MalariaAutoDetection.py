@@ -53,9 +53,6 @@ class MalariaAutoDetectionWidget(ScriptedLoadableModuleWidget, VTKObservationMix
         self.logic = None
         self._parameterNode = None
         self._parameterNodeGuiTag = None
-        self.currentInputVolume = None
-        self.currentImagePath = None
-        self.imageLoaded = False
 
     def setup(self):
         ScriptedLoadableModuleWidget.setup(self)
@@ -69,17 +66,19 @@ class MalariaAutoDetectionWidget(ScriptedLoadableModuleWidget, VTKObservationMix
         # Logic
         self.logic = MalariaAutoDetectionLogic()
 
+        models = self.logic.getModels()
+        for model_name, model_path in models:
+            self.ui.modelSelection.addItem(model_name, model_path)
+
         # Connections
         self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
         self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
         
         # Connect buttons
-        self.ui.loadImageButton.connect("clicked(bool)", self.onLoadImageButton)
         self.ui.analyzeButton.connect("clicked(bool)", self.onAnalyzeButton)
         self.ui.exportButton.connect("clicked(bool)", self.onExportButton)
-        
-        # Connect model selection
-        self.ui.modelSelection.connect("currentIndexChanged(int)", self.onModelSelectionChanged)
+        self.ui.inputImageNodeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateAnalyzeButtonState)
+        self.ui.modelSelection.connect("currentIndexChanged(int)", self.updateAnalyzeButtonState)
 
         # Initialize parameter node
         self.initializeParameterNode()
@@ -87,19 +86,10 @@ class MalariaAutoDetectionWidget(ScriptedLoadableModuleWidget, VTKObservationMix
         # Initialize UI state
         self.ui.outputsCollapsibleButton.collapsed = True
         self.ui.advancedCollapsibleButton.collapsed = True
-        self.ui.analyzeButton.enabled = False
+
         self.ui.exportButton.enabled = False
-        
-        # Set initial model selection to placeholder
-        self.ui.modelSelection.setCurrentIndex(0)
-        
-        # Disable the placeholder item in combobox
-        model_item = self.ui.modelSelection.model().item(0)
-        if model_item:
-            model_item.setFlags(model_item.flags() & ~qt.Qt.ItemIsEnabled)
-        
-        # Set initial image status with grey badge
-        self.setImageStatus(loaded=False)
+
+        self.updateAnalyzeButtonState()
 
     def cleanup(self):
         self.removeObservers()
@@ -121,237 +111,48 @@ class MalariaAutoDetectionWidget(ScriptedLoadableModuleWidget, VTKObservationMix
         if self._parameterNode:
             self._parameterNodeGuiTag = self._parameterNode.connectGui(self.ui)
 
-    def setImageStatus(self, loaded=False, filename=""):
-        """Update image status badge with grey (not loaded) or green (loaded)"""
-        if loaded and filename:
-            self.ui.imagePathLabel.setText(f"✅ {filename}")
-            self.ui.imagePathLabel.setStyleSheet("""
-                QLabel { 
-                    color: #2E7D32; 
-                    font-size: 12px;
-                    font-weight: 500;
-                    padding: 8px 12px;
-                    background-color: #E8F5E9;
-                    border-radius: 4px;
-                    margin-top: 5px;
-                    border: 1px solid #C8E6C9;
-                }
-            """)
-            self.imageLoaded = True
-        else:
-            self.ui.imagePathLabel.setText("❌ No files selected")
-            self.ui.imagePathLabel.setStyleSheet("""
-                QLabel { 
-                    color: #757575; 
-                    font-size: 12px;
-                    font-weight: 500;
-                    padding: 8px 12px;
-                    background-color: #F5F5F5;
-                    border-radius: 4px;
-                    margin-top: 5px;
-                    border: 1px solid #E0E0E0;
-                }
-            """)
-            self.imageLoaded = False
-        
-        # Update analyze button state
-        self.updateAnalyzeButtonState()
-
-    def onModelSelectionChanged(self, index):
-        """Handle model selection change"""
-        # Update analyze button state
-        self.updateAnalyzeButtonState()
-        
-        if index > 0:  # Valid model selected (not placeholder)
-            model_name = self.ui.modelSelection.currentText
-            logging.info(f"Model selected: {model_name}")
-
     def updateAnalyzeButtonState(self):
         """Enable analyze button only if image is loaded AND valid model is selected"""
-        model_selected = self.ui.modelSelection.currentIndex > 0
-        can_analyze = self.imageLoaded and model_selected
+        can_analyze = self.currentInputVolume and (self.ui.modelSelection.currentIndex >= 0)
         self.ui.analyzeButton.enabled = can_analyze
-        
         if can_analyze:
             logging.info("Ready to analyze: Image loaded and model selected")
 
-    def onLoadImageButton(self):
-        """Load microscopic image from file (PNG, JPG, TIFF, etc.)"""
-        # Open file dialog for image selection
-        fileDialog = qt.QFileDialog()
-        fileDialog.setFileMode(qt.QFileDialog.ExistingFile)
-        fileDialog.setNameFilter("Images (*.png *.jpg *.jpeg *.tiff *.tif *.bmp)")
-        fileDialog.setWindowTitle("Sélectionner une image microscopique")
-        
-        if fileDialog.exec_():
-            filePaths = fileDialog.selectedFiles()
-            if filePaths:
-                imagePath = filePaths[0]
-                self._loadImageFromPath(imagePath)
-
-    def _loadImageFromPath(self, imagePath):
-        """Load 2D microscopic image from file path into Slicer"""
-        try:
-            logging.info(f"Loading image from: {imagePath}")
-            
-            # Remove previous volume if exists
-            if self.currentInputVolume:
-                slicer.mrmlScene.RemoveNode(self.currentInputVolume)
-                self.currentInputVolume = None
-            
-            # Load image using PIL or OpenCV for 2D microscopic images
-            import numpy as np
-            image_array = None
-            
-            try:
-                # Try PIL first
-                from PIL import Image
-                img = Image.open(imagePath)
-                image_array = np.array(img)
-                logging.info(f"Image loaded with PIL. Shape: {image_array.shape}, dtype: {image_array.dtype}")
-            except ImportError:
-                # Fallback to OpenCV
-                import cv2
-                image_array = cv2.imread(imagePath)
-                if image_array is not None:
-                    image_array = cv2.cvtColor(image_array, cv2.COLOR_BGR2RGB)
-                    logging.info(f"Image loaded with OpenCV. Shape: {image_array.shape}, dtype: {image_array.dtype}")
-            
-            if image_array is None:
-                raise Exception("Impossible de lire l'image. Vérifiez le format du fichier.")
-            
-            # Ensure uint8 format
-            if image_array.dtype != np.uint8:
-                image_array = (image_array * 255).astype(np.uint8) if image_array.max() <= 1.0 else image_array.astype(np.uint8)
-            
-            # Create volume node from numpy array
-            self.currentInputVolume = self.logic.createVolumeFromArray(
-                image_array, 
-                os.path.splitext(os.path.basename(imagePath))[0]
-            )
-            
-            if self.currentInputVolume:
-                # Store the image path
-                self.currentImagePath = imagePath
-                
-                # Update UI with green badge
-                fileName = os.path.basename(imagePath)
-                self.setImageStatus(loaded=True, filename=fileName)
-                
-                # Store path in parameter node
-                self._parameterNode.inputImagePath = imagePath
-                
-                # Display image in slice viewers (Red, Yellow, Green)
-                slicer.util.setSliceViewerLayers(background=self.currentInputVolume)
-                
-                # Configure slice views for 2D display
-                layoutManager = slicer.app.layoutManager()
-                for viewName in ["Red", "Yellow", "Green"]:
-                    sliceWidget = layoutManager.sliceWidget(viewName)
-                    if sliceWidget:
-                        sliceLogic = sliceWidget.sliceLogic()
-                        sliceNode = sliceLogic.GetSliceNode()
-                        
-                        # Set orientation to show XY plane (axial view)
-                        sliceNode.SetOrientationToAxial()
-                        
-                        # Fit slice to all
-                        sliceLogic.FitSliceToAll()
-                        
-                        # Reset slice offset to center
-                        sliceLogic.SetSliceOffset(0)
-                
-                # Reset field of view
-                slicer.util.resetSliceViews()
-                
-                # Déterminer le message selon l'état du modèle
-                message_selection = (
-                    "Sélectionnez un modèle pour continuer." 
-                    if self.ui.modelSelection.currentIndex == 0 
-                    else "Vous pouvez maintenant lancer l'analyse."
-                )
-                
-                logging.info(f"Image loaded successfully: {fileName}")
-                slicer.util.infoDisplay(
-                    f"✓ Image chargée avec succès!\n\n"
-                    f"Fichier: {fileName}\n\n"
-                    f"{message_selection}",
-                    windowTitle="Image chargée"
-                )
-            else:
-                raise Exception("Impossible de créer le volume à partir de l'image")
-                
-        except Exception as e:
-            logging.error(f"Error loading image: {str(e)}")
-            slicer.util.errorDisplay(
-                f"Erreur lors du chargement de l'image:\n\n{str(e)}\n\n"
-                f"Vérifiez que le fichier est une image valide.",
-                windowTitle="Erreur de chargement"
-            )
-            self.setImageStatus(loaded=False)
-            self.currentImagePath = None
-
     def onAnalyzeButton(self):
         """Execute malaria detection when analyze button is clicked"""
-        if not self.currentInputVolume:
-            slicer.util.errorDisplay(
-                "Aucune image chargée.\n\n"
-                "Veuillez charger une image microscopique d'abord.",
-                windowTitle="Image manquante"
-            )
-            return
         
-        if self.ui.modelSelection.currentIndex == 0:
-            slicer.util.errorDisplay(
-                "Aucun modèle sélectionné.\n\n"
-                "Veuillez sélectionner un modèle de détection.",
-                windowTitle="Modèle manquant"
-            )
-            return
-        
-        # Get model path
-        model_path = self.logic.getDefaultModelPath()
-        if not os.path.exists(model_path):
-            slicer.util.errorDisplay(
-                f"⚠ Fichier de modèle non trouvé!\n\n"
-                f"Emplacement attendu:\n{model_path}\n\n"
-                f"Veuillez placer votre modèle YOLOv8 (.pt ou .pth) entraîné pour la détection de malaria à cet emplacement.",
-                windowTitle="Modèle manquant"
-            )
-            return
-        
-        try:
-            with slicer.util.tryWithErrorDisplay(_("Échec de l'analyse."), waitCursor=True):
-                # Run inference
-                logging.info("Starting inference...")
-                results = self.logic.runInference(self.currentInputVolume, model_path)
-                
-                # Display results
-                self.displayResults(results)
-                
-                # Show outputs section
-                self.ui.outputsCollapsibleButton.collapsed = False
-                
-                # Enable export button
-                self.ui.exportButton.enabled = True
-                
-                # Success message
-                slicer.util.infoDisplay(
-                    f"✓ Analyse terminée avec succès!\n\n"
-                    f"🦠 Parasites détectés: {results['parasite_count']}\n"
-                    f"⚪ Leucocytes détectés: {results['leukocyte_count']}\n"
-                    f"📊 Densité parasitaire: {results['parasitic_density']}\n\n"
-                    f"⏱️ Temps de traitement: {results['processing_time']:.2f}s\n\n"
-                    f"Les résultats avec annotations sont affichés dans les vues Rouge, Jaune et Verte.",
-                    windowTitle="Analyse terminée"
-                )
-                
-        except Exception as e:
-            logging.error(f"Analysis failed: {str(e)}")
-            slicer.util.errorDisplay(
-                f"Erreur pendant l'analyse:\n\n{str(e)}",
-                windowTitle="Erreur d'analyse"
-            )
+        with slicer.util.tryWithErrorDisplay(_("Échec de l'analyse."), waitCursor=True):
+
+            if not self.currentInputVolume:
+                raise RuntimeError("Aucune image chargée. Veuillez charger une image microscopique d'abord.")
+            
+            # Get model path
+            model_path = self.ui.modelSelection.currentData
+            if not os.path.exists(model_path):
+                raise RuntimeError(f"Fichier de modèle non trouvé! Emplacement attendu: {model_path}")
+
+            # Run inference
+            logging.info("Starting inference...")
+            results = self.logic.runInference(self.currentInputVolume, model_path)
+            
+            # Display results
+            self.displayResults(results)
+            
+            # Show outputs section
+            self.ui.outputsCollapsibleButton.collapsed = False
+            
+            # Enable export button
+            self.ui.exportButton.enabled = True
+            
+        # Success message
+        slicer.util.infoDisplay(
+            f"✓ Analyse terminée avec succès!\n\n"
+            f"🦠 Parasites détectés: {results['parasite_count']}\n"
+            f"⚪ Leucocytes détectés: {results['leukocyte_count']}\n"
+            f"📊 Densité parasitaire: {results['parasitic_density']}\n\n"
+            f"⏱️ Temps de traitement: {results['processing_time']:.2f}s\n",
+            windowTitle="Analyse terminée"
+        )
 
     def displayResults(self, results):
         """Display detection results in the UI"""
@@ -360,38 +161,19 @@ class MalariaAutoDetectionWidget(ScriptedLoadableModuleWidget, VTKObservationMix
         self.ui.leukocyteCountLabel.text = str(results['leukocyte_count'])
         self.ui.parasiticDensityLabel.text = results['parasitic_density']
         
-        # Display annotated image in slice viewers
-        if results['annotated_volume']:
-            annotatedVolume = results['annotated_volume']
-            
-            # Show annotated image in all three slice viewers
-            slicer.util.setSliceViewerLayers(
-                background=annotatedVolume,
-                foreground=None,
-                label=None
-            )
-            
-            # Configure slice views to display results properly
-            layoutManager = slicer.app.layoutManager()
-            for viewName in ["Red", "Yellow", "Green"]:
-                sliceWidget = layoutManager.sliceWidget(viewName)
-                if sliceWidget:
-                    sliceLogic = sliceWidget.sliceLogic()
-                    sliceNode = sliceLogic.GetSliceNode()
-                    
-                    # Set to axial orientation
-                    sliceNode.SetOrientationToAxial()
-                    
-                    # Fit to window
-                    sliceLogic.FitSliceToAll()
-                    
-                    # Center the slice
-                    sliceLogic.SetSliceOffset(0)
-            
-            # Reset views
-            slicer.util.resetSliceViews()
-            
-            logging.info("Results displayed in slice viewers")
+        slicer.app.layoutManager().setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUpRedSliceView)
+        slicer.util.setSliceViewerLayers(background=self.currentInputVolume, fit=True)
+
+    @property
+    def currentInputVolume(self):
+        return self.ui.inputImageNodeSelector.currentNode()
+
+    @property
+    def currentImagePath(self):
+        volumeNode = self.ui.inputImageNodeSelector.currentNode()
+        if volumeNode and volumeNode.GetStorageNode():
+            return volumeNode.GetStorageNode().GetFileName()
+        return ""
 
     def onExportButton(self):
         """Export results to CSV file"""
@@ -440,14 +222,45 @@ class MalariaAutoDetectionWidget(ScriptedLoadableModuleWidget, VTKObservationMix
 #
 
 class MalariaAutoDetectionLogic(ScriptedLoadableModuleLogic):
+
+    RESOURCES_PATH = os.path.join(os.path.dirname(__file__),  "Resources")
+
     def __init__(self):
         ScriptedLoadableModuleLogic.__init__(self)
         self.lastResults = None
+        self.lastModel = None  # Cache loaded model for performance
+        self.lastModelPath = None  # Track last used model path
 
     def getParameterNode(self):
         return MalariaAutoDetectionParameterNode(super().getParameterNode())
 
-    
+    def getModels(self):
+        """Return list of model name and path pairs"""
+        models = []
+        models_dir = os.path.join(self.RESOURCES_PATH, "Models")
+
+        # If the models directory doesn't exist, return empty list
+        if not os.path.isdir(models_dir):
+            raise FileNotFoundError(f"Models directory not found: {models_dir}")
+
+        try:
+            for fname in os.listdir(models_dir):
+                if not fname:
+                    continue
+                lower = fname.lower()
+                #if lower.endswith('.pt') or lower.endswith('.pth'):
+                if lower.endswith('.pt'):
+                    full_path = os.path.abspath(os.path.join(models_dir, fname))
+                    name = os.path.splitext(fname)[0]
+                    models.append((name, full_path))
+        except Exception:
+            # On any error (permissions, etc.) return what we have so far
+            return models
+
+        # Sort by model name for predictable ordering
+        models.sort(key=lambda x: x[0].lower())
+        return models
+
     def getDefaultModelPath(self):
         # Get module folder dynamically
         moduleDir = os.path.dirname(slicer.util.modulePath('MalariaAutoDetection'))
@@ -457,50 +270,6 @@ class MalariaAutoDetectionLogic(ScriptedLoadableModuleLogic):
         os.makedirs(os.path.dirname(modelPath), exist_ok=True)
         return modelPath
 
-
-    def createVolumeFromArray(self, image_array, name="MicroscopicImage"):
-        """Create a MRML volume node from numpy array (for loading images)"""
-        import numpy as np
-        from vtk.util import numpy_support
-        import vtk
-        import slicer
-
-        # Ensure RGB image
-        if len(image_array.shape) == 2:
-            import cv2
-            image_array = cv2.cvtColor(image_array, cv2.COLOR_GRAY2RGB)
-        elif image_array.shape[2] == 4:  # RGBA
-            import cv2
-            image_array = cv2.cvtColor(image_array, cv2.COLOR_RGBA2RGB)
-
-        # Create new volume node - UTILISER vtkMRMLVectorVolumeNode pour RGB
-        volumeNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLVectorVolumeNode")
-        volumeNode.SetName(name)
-
-        # Convert numpy array to VTK
-        vtk_array = numpy_support.numpy_to_vtk(
-            image_array.ravel(),
-            deep=True,
-            array_type=vtk.VTK_UNSIGNED_CHAR
-        )
-        vtk_array.SetNumberOfComponents(3)
-
-        # Create image data
-        imageData = vtk.vtkImageData()
-        imageData.SetDimensions(image_array.shape[1], image_array.shape[0], 1)
-        imageData.GetPointData().SetScalars(vtk_array)
-
-        # Set to volume node
-        volumeNode.SetAndObserveImageData(imageData)
-        volumeNode.CreateDefaultDisplayNodes()
-
-        # Set proper spacing for 2D microscopic images
-        volumeNode.SetSpacing(1.0, 1.0, 1.0)
-        volumeNode.SetOrigin(0.0, 0.0, 0.0)
-
-        return volumeNode
-    
-
     def runInference(self, inputVolume, modelPath):
         """
         Run YOLOv8 inference on the input image
@@ -508,14 +277,23 @@ class MalariaAutoDetectionLogic(ScriptedLoadableModuleLogic):
         
         if not inputVolume:
             raise ValueError("Input volume is invalid")
-        
+
         import time
         import numpy as np
         import logging
-        from vtk.util import numpy_support
-        import cv2
-        from ultralytics import YOLO
-        
+
+        try:
+            from ultralytics import YOLO
+        except ImportError:
+            slicer.util.pip_install('ultralytics')
+            from ultralytics import YOLO
+
+        try:
+            import torch
+        except ImportError:
+            slicer.util.pip_install('torch')
+            import torch
+
         startTime = time.time()
         logging.info("Starting malaria detection inference")
     
@@ -523,46 +301,107 @@ class MalariaAutoDetectionLogic(ScriptedLoadableModuleLogic):
             raise FileNotFoundError(f"Model file not found: {modelPath}")
         
         try:
-            # Load YOLO model only once per session (performance)
-            if not hasattr(self, "_yoloModel") or self._yoloModel.model.fuse is None:
-                self._yoloModel = YOLO(modelPath)
-                logging.info(f"YOLO model loaded from: {modelPath}")
-
-            model = self._yoloModel
+            # Load model only once per session (performance)
+            if self.lastModelPath == modelPath and self.lastModel and self.lastModel.model.fuse is not None:
+                logging.info(f"Using cached YOLO model from: {self.lastModelPath}")
+                model = self.lastModel
+            else:
+                logging.info(f"Loading model from: {modelPath}")
+                model = YOLO(modelPath)
+                self.lastModel = model
+                self.lastModelPath = modelPath
 
             # Convert inputVolume (VTK) → numpy
-            imageData = inputVolume.GetImageData()
-            dims = imageData.GetDimensions()
-            scalars = imageData.GetPointData().GetScalars()
+            image_array = slicer.util.arrayFromVolume(inputVolume)
+            inputVolumIJKToRAS = vtk.vtkMatrix4x4()
+            inputVolume.GetIJKToRASMatrix(inputVolumIJKToRAS)
 
-            image_array = numpy_support.vtk_to_numpy(scalars)
-            numComponents = scalars.GetNumberOfComponents()
+            numComponents = image_array.shape[3] if len(image_array.shape) == 4 else 1
 
             if numComponents == 1:
-                image_array = image_array.reshape(dims[1], dims[0])
-                image_array = cv2.cvtColor(image_array.astype(np.uint8), cv2.COLOR_GRAY2RGB)
+                raise RuntimeError("Input image has 1 channel, expected 3-channel RGB")
             elif numComponents == 3:
-                image_array = image_array.reshape(dims[1], dims[0], 3)
+                image_array = image_array.squeeze() # 
             elif numComponents == 4:
-                image_array = image_array.reshape(dims[1], dims[0], 4)
-                image_array = cv2.cvtColor(image_array.astype(np.uint8), cv2.COLOR_RGBA2RGB)
+                raise RuntimeError("Input image has 4 channels (RGBA), expected 3-channel RGB")
 
             image_array = image_array.astype(np.uint8)
 
+            # Image array in Slicer is in RGB, the YOLO model expects BGR, we convert to BGR
+            image_array = image_array[:, :, ::-1]
+
             # Run YOLO inference
-            results = model.predict(source=image_array, conf=0.25, verbose=False)
+            device = torch.device("cpu")
+            results = model.predict(source=image_array)
+
+            # CONF_THRES = 0.3
+            # IMGSZ = 640
+            # results = model.predict(
+            #     source=image_array,
+            #     conf=CONF_THRES,
+            #     imgsz=IMGSZ,
+            #     device=device,
+            #     retina_masks=True,
+            #     augment=False,  # Disable TTA
+            #     stream=False,   # For better memory handling
+            #     max_det=50,      # Limit detections per image
+            #     #verbose=False,
+            # )
+
             res = results[0]
 
             # Count detections
+            classes = model.names  # class names, e.g., {0: 'Parasite', 1: 'Neutrophile', 2: 'Leucocyte'}
+            roi_nodes = []
             parasite_count = 0
             leukocyte_count = 0
+            slicer.res = res
             if len(res.boxes) > 0:
                 for box in res.boxes:
-                    cls_id = int(box.cls[0])
-                    if cls_id == 0:
+                    cls_name = model.names[int(box.cls[0])].lower()
+                    name = None
+                    if cls_name == 'parasite':
                         parasite_count += 1
-                    elif cls_id == 1:
+                        name = f"parasite {parasite_count}"
+                    elif cls_name == 'leucocyte' or cls_name == 'leukocyte':
                         leukocyte_count += 1
+                        name = f"leukocyte {leukocyte_count}"
+                    if name:
+                        roi = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsROINode")
+                        roi.SetName(name)
+                        roi.CreateDefaultDisplayNodes()
+                        roi.GetDisplayNode().SetHandlesInteractive(False)
+
+                        # Get bounding box in RAS coordinates
+                        box_xyxy = box.xyxy[0].tolist()  # [x1, y1, x2, y2]
+                        corners_IJK = [
+                            [box_xyxy[0], box_xyxy[1], 0, 1],  # Top-left
+                            [box_xyxy[2], box_xyxy[1], 0, 1],  # Top-right
+                            [box_xyxy[2], box_xyxy[3], 0, 1],  # Bottom-right
+                            [box_xyxy[0], box_xyxy[3], 0, 1]   # Bottom-left
+                        ]
+                        boundingBox_RAS = vtk.vtkBoundingBox()
+                        for corner in corners_IJK:
+                            boundingBox_RAS.AddPoint(inputVolumIJKToRAS.MultiplyPoint(corner)[0:3])
+
+                        # Compute radius with minimum size
+                        boundingBoxLength_RAS = [0, 0, 0]
+                        boundingBox_RAS.GetLengths(boundingBoxLength_RAS)
+                        minimumRadius = 1.0
+                        boundingBoxRadius_RAS = [0, 0, 0]
+                        for i in range(3):
+                            radius = boundingBoxLength_RAS[i] / 2
+                            if radius < minimumRadius:
+                                radius = minimumRadius
+                            boundingBoxRadius_RAS[i] = radius
+
+                        boundingBoxCenter_RAS = [0, 0, 0]
+                        boundingBox_RAS.GetCenter(boundingBoxCenter_RAS)
+
+                        roi.SetCenter(boundingBoxCenter_RAS)
+                        roi.SetRadiusXYZ(boundingBoxRadius_RAS)
+
+                        roi_nodes.append(roi)
 
             # Parasitic density
             if leukocyte_count > 0:
@@ -571,19 +410,12 @@ class MalariaAutoDetectionLogic(ScriptedLoadableModuleLogic):
             else:
                 density_str = "N/A (aucun leucocyte détecté)"
 
-            # Create annotated image
-            annotated_image = res.plot()
-            annotated_volume = self.createVolumeFromArray(
-                annotated_image,
-                "MalariaDetection_Result"
-            )
-
             # Store results
             self.lastResults = {
                 'parasite_count': parasite_count,
                 'leukocyte_count': leukocyte_count,
                 'parasitic_density': density_str,
-                'annotated_volume': annotated_volume,
+                'roi_nodes': roi_nodes,
                 'raw_results': res,
                 'processing_time': time.time() - startTime
             }
@@ -635,7 +467,7 @@ class MalariaAutoDetectionTest(ScriptedLoadableModuleTest):
             import numpy as np
             # Create a dummy test image
             test_image = np.random.randint(0, 255, (512, 512, 3), dtype=np.uint8)
-            testVolume = logic.createVolumeFromArray(test_image, "TestImage")
+            #testVolume = logic.createVolumeFromArray(test_image, "TestImage")
 
             self.assertIsNotNone(testVolume)
             self.delayDisplay("Volume creation test passed")

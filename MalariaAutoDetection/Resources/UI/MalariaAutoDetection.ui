@@ -26,187 +26,40 @@
    <property name="bottomMargin">
     <number>10</number>
    </property>
-
-   <!-- ==================== INPUTS SECTION ==================== -->
    <item>
     <widget class="ctkCollapsibleButton" name="inputsCollapsibleButton">
      <property name="text">
-      <string>📥 Inputs</string>
+      <string>📥 Entrées</string>
      </property>
      <property name="collapsed">
       <bool>false</bool>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_inputs">
-      <property name="spacing">
-       <number>10</number>
-      </property>
-      
-      <!-- Charger une image -->
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_loadImage">
-        <item>
-         <widget class="QLabel" name="label_loadImage">
-          <property name="text">
-           <string>Image microscopique</string>
-          </property>
-          <property name="styleSheet">
-           <string>QLabel { 
-             font-weight: bold; 
-             font-size: 13px;
-             color: #333333;
-           }</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="loadImageButton">
-          <property name="text">
-           <string>📁 Load image</string>
-          </property>
-          <property name="toolTip">
-           <string>Select an image (.png, .jpg, .tiff)</string>
-          </property>
-          <property name="styleSheet">
-           <string>QPushButton {
-             background-color: #607D8B;
-             color: white;
-             font-weight: bold;
-             padding: 10px;
-             border-radius: 4px;
-             font-size: 13px;
-             border: none;
-           }
-           QPushButton:hover {
-             background-color: #546E7A;
-           }
-           QPushButton:pressed {
-             background-color: #455A64;
-           }</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="imagePathLabel">
-          <property name="text">
-           <string>❌ No files selected</string>
-          </property>
-          <property name="wordWrap">
-           <bool>true</bool>
-          </property>
-          <property name="styleSheet">
-           <string>QLabel { 
-             color: #757575; 
-             font-size: 12px;
-             font-weight: 500;
-             padding: 8px 12px;
-             background-color: #F5F5F5;
-             border-radius: 4px;
-             margin-top: 5px;
-             border: 1px solid #E0E0E0;
-           }</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-
-      <!-- Separator line -->
-      <item>
-       <widget class="Line" name="line1">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="styleSheet">
-         <string>Line { background-color: #E0E0E0; }</string>
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Image de microscopie:</string>
         </property>
        </widget>
       </item>
-
-      <!-- Modèle de détection -->
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_model">
-        <item>
-         <widget class="QLabel" name="label_model">
-          <property name="text">
-           <string>Detection model</string>
-          </property>
-          <property name="styleSheet">
-           <string>QLabel { 
-             font-weight: bold; 
-             font-size: 13px;
-             color: #333333;
-           }</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="modelSelection">
-          <property name="toolTip">
-           <string>Select the detection model</string>
-          </property>
-          <property name="styleSheet">
-           <string>QComboBox {
-             padding: 8px 12px;
-             background-color: #F5F5F5;
-             border: 1px solid #E0E0E0;
-             border-radius: 4px;
-             color: #757575;
-             font-size: 12px;
-             font-weight: 500;
-           }
-           QComboBox:hover {
-             border: 1px solid #BDBDBD;
-           }
-           QComboBox::drop-down {
-             border: none;
-             width: 20px;
-           }
-           QComboBox::down-arrow {
-             image: none;
-             border-left: 4px solid transparent;
-             border-right: 4px solid transparent;
-             border-top: 5px solid #757575;
-             margin-right: 8px;
-           }</string>
-          </property>
-          <item>
-           <property name="text">
-            <string>Select model</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>⚙️ YOLOv8 (malariaDetection.pth)</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
-      </item>
-
-      <!-- Separator line -->
-      <item>
-       <widget class="Line" name="line2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="styleSheet">
-         <string>Line { background-color: #E0E0E0; }</string>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Modèle de détection:</string>
         </property>
        </widget>
       </item>
-
-      <!-- Bouton Lancer l'analyse -->
-      <item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="modelSelection">
+        <property name="toolTip">
+         <string>Select the detection model</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="2">
        <widget class="QPushButton" name="analyzeButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="toolTip">
          <string>Start automatic detection</string>
-        </property>
-        <property name="text">
-         <string>▶ Start analysis</string>
         </property>
         <property name="styleSheet">
          <string>QPushButton {
@@ -229,33 +82,52 @@
            background-color: #388E3C;
          }</string>
         </property>
+        <property name="text">
+         <string>▶ Commencer l'analyse</string>
+        </property>
        </widget>
       </item>
-
+      <item row="0" column="1">
+       <widget class="qMRMLNodeComboBox" name="inputImageNodeSelector">
+        <property name="nodeTypes">
+         <stringlist notr="true">
+          <string>vtkMRMLVolumeNode</string>
+         </stringlist>
+        </property>
+        <property name="hideChildNodeTypes">
+         <stringlist notr="true"/>
+        </property>
+        <property name="addEnabled">
+         <bool>false</bool>
+        </property>
+        <property name="editEnabled">
+         <bool>true</bool>
+        </property>
+        <property name="renameEnabled">
+         <bool>true</bool>
+        </property>
+        <property name="interactionNodeSingletonTag">
+         <string notr="true"/>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
-
-   <!-- ==================== OUTPUTS SECTION ==================== -->
    <item>
     <widget class="ctkCollapsibleButton" name="outputsCollapsibleButton">
      <property name="text">
-      <string>📊 Outputs</string>
+      <string>📊 Résultats</string>
      </property>
      <property name="collapsed">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_outputs">
       <property name="spacing">
        <number>12</number>
       </property>
-
-      <!-- Résultats analytiques -->
       <item>
        <widget class="QGroupBox" name="analyticsGroupBox">
-        <property name="title">
-         <string>Detections</string>
-        </property>
         <property name="styleSheet">
          <string>QGroupBox {
            font-weight: bold;
@@ -273,25 +145,26 @@
            background-color: white;
          }</string>
         </property>
+        <property name="title">
+         <string>Détections</string>
+        </property>
         <layout class="QVBoxLayout" name="verticalLayout_analytics">
          <property name="spacing">
           <number>8</number>
          </property>
-         
-         <!-- Parasites détectés -->
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_parasites">
            <item>
             <widget class="QLabel" name="label_parasiteCount">
-             <property name="text">
-              <string>🦠 Parasites</string>
-             </property>
              <property name="styleSheet">
               <string>QLabel { 
                 font-size: 12px; 
                 font-weight: normal;
                 color: #555555;
               }</string>
+             </property>
+             <property name="text">
+              <string>🦠 Parasites</string>
              </property>
             </widget>
            </item>
@@ -310,12 +183,6 @@
            </item>
            <item>
             <widget class="QLabel" name="parasiteCountLabel">
-             <property name="text">
-              <string>-</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignVCenter</set>
-             </property>
              <property name="styleSheet">
               <string>QLabel { 
                 font-weight: bold; 
@@ -327,25 +194,29 @@
                 min-width: 60px;
               }</string>
              </property>
+             <property name="text">
+              <string>-</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
             </widget>
            </item>
           </layout>
          </item>
-
-         <!-- Leucocytes détectés -->
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_leukocytes">
            <item>
             <widget class="QLabel" name="label_leukocyteCount">
-             <property name="text">
-              <string>⚪ Leukocytes</string>
-             </property>
              <property name="styleSheet">
               <string>QLabel { 
                 font-size: 12px; 
                 font-weight: normal;
                 color: #555555;
               }</string>
+             </property>
+             <property name="text">
+              <string>⚪ Leucocytes</string>
              </property>
             </widget>
            </item>
@@ -364,12 +235,6 @@
            </item>
            <item>
             <widget class="QLabel" name="leukocyteCountLabel">
-             <property name="text">
-              <string>-</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignVCenter</set>
-             </property>
              <property name="styleSheet">
               <string>QLabel { 
                 font-weight: bold; 
@@ -381,25 +246,29 @@
                 min-width: 60px;
               }</string>
              </property>
+             <property name="text">
+              <string>-</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
             </widget>
            </item>
           </layout>
          </item>
-
-         <!-- Densité parasitaire -->
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_density">
            <item>
             <widget class="QLabel" name="label_parasiticDensity">
-             <property name="text">
-              <string>📈 Density (DP)</string>
-             </property>
              <property name="styleSheet">
               <string>QLabel { 
                 font-size: 12px; 
                 font-weight: normal;
                 color: #555555;
               }</string>
+             </property>
+             <property name="text">
+              <string>📈 Densité (DP)</string>
              </property>
             </widget>
            </item>
@@ -418,12 +287,6 @@
            </item>
            <item>
             <widget class="QLabel" name="parasiticDensityLabel">
-             <property name="text">
-              <string>-</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignVCenter</set>
-             </property>
              <property name="styleSheet">
               <string>QLabel { 
                 font-weight: bold; 
@@ -435,50 +298,19 @@
                 min-width: 60px;
               }</string>
              </property>
+             <property name="text">
+              <string>-</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
             </widget>
            </item>
           </layout>
          </item>
-
         </layout>
        </widget>
       </item>
-
-      <!-- Info contextuelle (compacte) -->
-      <item>
-       <widget class="QLabel" name="label_resultsInfo">
-        <property name="text">
-         <string>💡 Detections are displayed in Slicer's 2D views</string>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-        <property name="styleSheet">
-         <string>QLabel { 
-           color: #616161; 
-           padding: 8px 10px;
-           background-color: #F5F5F5;
-           border-left: 3px solid #90CAF9;
-           border-radius: 3px;
-           font-size: 11px;
-         }</string>
-        </property>
-       </widget>
-      </item>
-
-      <!-- Separator line -->
-      <item>
-       <widget class="Line" name="line3">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="styleSheet">
-         <string>Line { background-color: #E0E0E0; }</string>
-        </property>
-       </widget>
-      </item>
-
-      <!-- Export button -->
       <item>
        <widget class="QPushButton" name="exportButton">
         <property name="enabled">
@@ -486,9 +318,6 @@
         </property>
         <property name="toolTip">
          <string>Exporter les résultats au format CSV</string>
-        </property>
-        <property name="text">
-         <string>💾 Export (CSV)</string>
         </property>
         <property name="styleSheet">
          <string>QPushButton {
@@ -511,36 +340,28 @@
            background-color: #1565C0;
          }</string>
         </property>
+        <property name="text">
+         <string>💾 Exporter (CSV)</string>
+        </property>
        </widget>
       </item>
-
      </layout>
     </widget>
    </item>
-
-   <!-- ==================== ADVANCED SECTION ==================== -->
    <item>
     <widget class="ctkCollapsibleButton" name="advancedCollapsibleButton">
      <property name="text">
-      <string>⚡ Advanced</string>
+      <string>⚡ Avancé</string>
      </property>
      <property name="collapsed">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_advanced">
       <property name="spacing">
        <number>10</number>
       </property>
-      
-      <!-- Contenu vide pour le moment -->
       <item>
        <widget class="QLabel" name="label_advancedPlaceholder">
-        <property name="text">
-         <string>Paramètres avancés disponibles prochainement</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
         <property name="styleSheet">
          <string>QLabel { 
            color: #9E9E9E; 
@@ -549,14 +370,17 @@
            font-size: 11px;
          }</string>
         </property>
+        <property name="text">
+         <string>Paramètres avancés disponibles prochainement</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
        </widget>
       </item>
-
      </layout>
     </widget>
    </item>
-
-   <!-- Spacer -->
    <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
@@ -570,23 +394,44 @@
      </property>
     </spacer>
    </item>
-
   </layout>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>qMRMLWidget</class>
-   <extends>QWidget</extends>
-   <header>qMRMLWidget.h</header>
-   <container>1</container>
-  </customwidget>
   <customwidget>
    <class>ctkCollapsibleButton</class>
    <extends>QWidget</extends>
    <header>ctkCollapsibleButton.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>qMRMLNodeComboBox</class>
+   <extends>QWidget</extends>
+   <header>qMRMLNodeComboBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLWidget</class>
+   <extends>QWidget</extends>
+   <header>qMRMLWidget.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>MalariaAutoDetection</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>inputImageNodeSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>197</x>
+     <y>559</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>180</x>
+     <y>59</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
