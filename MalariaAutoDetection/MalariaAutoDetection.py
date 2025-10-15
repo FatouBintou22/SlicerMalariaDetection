@@ -327,38 +327,44 @@ class MalariaAutoDetectionLogic(ScriptedLoadableModuleLogic):
 
             image_array = image_array.astype(np.uint8)
 
-            # Run YOLO inference
-            #results = model.predict(source=image_array, conf=0.25, verbose=False)
+            # Image array in Slicer is in RGB, the YOLO model expects BGR, we convert to BGR
+            image_array = image_array[:, :, ::-1]
 
-            CONF_THRES = 0.3
-            IMGSZ = 640
+            # Run YOLO inference
             device = torch.device("cpu")
-            results = model.predict(
-                source=image_array,
-                conf=CONF_THRES,
-                imgsz=IMGSZ,
-                device=device,
-                retina_masks=True,
-                augment=False,  # Disable TTA
-                stream=False,   # For better memory handling
-                max_det=50,      # Limit detections per image
-                #verbose=False,
-            )
+            results = model.predict(source=image_array)
+
+            # CONF_THRES = 0.3
+            # IMGSZ = 640
+            # results = model.predict(
+            #     source=image_array,
+            #     conf=CONF_THRES,
+            #     imgsz=IMGSZ,
+            #     device=device,
+            #     retina_masks=True,
+            #     augment=False,  # Disable TTA
+            #     stream=False,   # For better memory handling
+            #     max_det=50,      # Limit detections per image
+            #     #verbose=False,
+            # )
 
             res = results[0]
 
             # Count detections
+            classes = model.names  # class names, e.g., {0: 'Parasite', 1: 'Neutrophile', 2: 'Leucocyte'}
             roi_nodes = []
             parasite_count = 0
             leukocyte_count = 0
+            slicer.res = res
             if len(res.boxes) > 0:
                 for box in res.boxes:
-                    cls_id = int(box.cls[0])
+                    cls_name = model.names[int(box.cls[0])].lower()
+                    print(cls_name)
                     name = None
-                    if cls_id == 0:
+                    if cls_name == 'parasite':
                         parasite_count += 1
                         name = f"parasite {parasite_count}"
-                    elif cls_id == 1:
+                    elif cls_name == 'leucocyte' or cls_name == 'leukocyte':
                         leukocyte_count += 1
                         name = f"leukocyte {leukocyte_count}"
                     if name:

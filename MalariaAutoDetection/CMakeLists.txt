@@ -10,7 +10,6 @@ set(MODULE_PYTHON_RESOURCES
   Resources/Icons/${MODULE_NAME}.png
   Resources/UI/${MODULE_NAME}.ui
   Resources/Models/malariaDetection.pt
-  Resources/Models/MP-IDB-YOLO.pt
   )
 
 #-----------------------------------------------------------------------------
