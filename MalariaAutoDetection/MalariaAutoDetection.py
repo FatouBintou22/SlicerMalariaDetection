@@ -359,7 +359,6 @@ class MalariaAutoDetectionLogic(ScriptedLoadableModuleLogic):
             if len(res.boxes) > 0:
                 for box in res.boxes:
                     cls_name = model.names[int(box.cls[0])].lower()
-                    print(cls_name)
                     name = None
                     if cls_name == 'parasite':
                         parasite_count += 1
