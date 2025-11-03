@@ -436,7 +436,9 @@ class MalariaAutoDetectionLogic(ScriptedLoadableModuleLogic):
         
         import csv
         with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.writer(csvfile)
+            #writer = csv.writer(csvfile)
+            writer = csv.writer(csvfile, delimiter=';')
+
             writer.writerow(['Métrique', 'Valeur'])
             if imagePath:
                 writer.writerow(['Fichier image', os.path.basename(imagePath)])
