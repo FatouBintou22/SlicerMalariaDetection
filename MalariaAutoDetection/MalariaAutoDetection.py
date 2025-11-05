@@ -160,9 +160,55 @@ class MalariaAutoDetectionWidget(ScriptedLoadableModuleWidget, VTKObservationMix
         self.ui.parasiteCountLabel.text = str(results['parasite_count'])
         self.ui.leukocyteCountLabel.text = str(results['leukocyte_count'])
         self.ui.parasiticDensityLabel.text = results['parasitic_density']
-        
-        slicer.app.layoutManager().setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUpRedSliceView)
-        slicer.util.setSliceViewerLayers(background=self.currentInputVolume, fit=True)
+
+        # Display results in a Table and change layout to "Four Up Table"
+        self.generateResultsTable(results)
+
+        # Maximize Red slice view for better visualization, without changing the "Four Up Table" layout:
+        # get the Red slice view widget, access the maximize button from its controller, and simulate the click
+        redSlice = slicer.app.layoutManager().sliceWidget('Red')
+        maximizeButton = redSlice.sliceController().findChild('QToolButton', 'MaximizeViewButton')
+        if maximizeButton: maximizeButton.click()
+
+    def generateResultsTable(self, results):
+        """
+        Create and display the table node that shows detection results
+        """
+
+        # Create or get existing table node
+        if not hasattr(self, 'tableNode'):
+            self.tableNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTableNode", "MalariaDetectionResults")
+            if not self.tableNode:
+                raise RuntimeError("Failed to create results table node")
+
+        # Add columns if they don't exist
+        if self.tableNode.GetNumberOfColumns() == 0:
+            column_names = [
+                'Volume',
+                'Nombre de parasites',
+                'Nombre de leucocytes',
+                'Densité parasitaire',
+                'Temps de traitement (secondes)',
+            ]
+
+            for column_name in column_names: self.tableNode.AddColumn().SetName(column_name)
+
+        # Clear existing rows
+        # self.tableNode.RemoveRow(0)
+
+        # Add new row with results
+        row = self.tableNode.AddEmptyRow()
+        self.tableNode.SetCellText(row, 0, self.currentInputVolume.GetName())
+        self.tableNode.SetCellText(row, 1, str(results['parasite_count']))
+        self.tableNode.SetCellText(row, 2, str(results['leukocyte_count']))
+        self.tableNode.SetCellText(row, 3, results['parasitic_density'])
+        self.tableNode.SetCellText(row, 4, f"{results['processing_time']:.2f}")
+
+        # Change layout to "Four Up Table" and make the Table visible
+        slicer.app.layoutManager().setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpTableView)
+        slicer.app.applicationLogic().GetSelectionNode().SetActiveTableID(self.tableNode.GetID())
+        slicer.app.applicationLogic().PropagateTableSelection()
+
 
     @property
     def currentInputVolume(self):
